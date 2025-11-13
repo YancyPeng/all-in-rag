@@ -2,10 +2,10 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.document_loaders import TextLoader
 
 # 1. 文档加载
-loader = TextLoader("../../data/C2/txt/蜂医.txt", encoding="utf-8")
+loader = TextLoader("/workspaces/all-in-rag/data/C2/txt/蜂医.txt", encoding="utf-8")
 docs = loader.load()
 
-# 2. 初始化固定大小分块器
+# 2. 初始化固定大小分块器, 默认只能按照一个分隔符 "\n\n" 去分割，而 recusiveCharacterTextSpliter 可以设置多个分隔符
 text_splitter = CharacterTextSplitter(
     chunk_size=200,    # 每个块的大小
     chunk_overlap=10   # 块之间的重叠大小

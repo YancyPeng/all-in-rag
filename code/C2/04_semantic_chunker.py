@@ -14,7 +14,7 @@ text_splitter = SemanticChunker(
     breakpoint_threshold_type="percentile" # 也可以是 "standard_deviation", "interquartile", "gradient"
 )
 
-loader = TextLoader("../../data/C2/txt/蜂医.txt", encoding="utf-8")
+loader = TextLoader("/workspaces/all-in-rag/data/C2/txt/蜂医.txt", encoding="utf-8")
 documents = loader.load()
 
 docs = text_splitter.split_documents(documents)

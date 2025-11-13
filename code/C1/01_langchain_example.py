@@ -2,7 +2,7 @@ import os
 # hugging face镜像设置，如果国内环境无法使用启用该设置
 # os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 from dotenv import load_dotenv
-from langchain_community.document_loaders import UnstructuredMarkdownLoader
+from langchain_community.document_loaders import UnstructuredPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.vectorstores import InMemoryVectorStore
@@ -11,14 +11,16 @@ from langchain_deepseek import ChatDeepSeek
 
 load_dotenv()
 
-markdown_path = "../../data/C1/markdown/easy-rl-chapter1.md"
+markdown_path = "/workspaces/all-in-rag/data/C2/pdf/rag.pdf"
 
 # 加载本地markdown文件
-loader = UnstructuredMarkdownLoader(markdown_path)
+loader = UnstructuredPDFLoader(file_path=markdown_path,
+                               mode="elements",
+                               strategy="hi_res")
 docs = loader.load()
 
 # 文本分块
-text_splitter = RecursiveCharacterTextSplitter()
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=200, chunk_overlap=50)
 chunks = text_splitter.split_documents(docs)
 
 # 中文嵌入模型
@@ -27,7 +29,7 @@ embeddings = HuggingFaceEmbeddings(
     model_kwargs={'device': 'cpu'},
     encode_kwargs={'normalize_embeddings': True}
 )
-  
+
 # 构建向量存储
 vectorstore = InMemoryVectorStore(embeddings)
 vectorstore.add_documents(chunks)
@@ -61,4 +63,5 @@ retrieved_docs = vectorstore.similarity_search(question, k=3)
 docs_content = "\n\n".join(doc.page_content for doc in retrieved_docs)
 
 answer = llm.invoke(prompt.format(question=question, context=docs_content))
-print(answer)
+
+print(answer.content)

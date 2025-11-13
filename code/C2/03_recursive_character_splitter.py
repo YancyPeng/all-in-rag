@@ -1,10 +1,10 @@
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import TextLoader
 
-loader = TextLoader("../../data/C2/txt/蜂医.txt", encoding="utf-8")
+loader = TextLoader("/workspaces/all-in-rag/data/C2/txt/蜂医.txt", encoding="utf-8")
 docs = loader.load()
 
-text_splitter = RecursiveCharacterTextSplitter(
+text_splitter = RecursiveCharacterTextSplitter.from_language(
     # 针对中英文混合文本，定义一个更全面的分隔符列表
     separators=["\n\n", "\n", "。", "，", " ", ""], # 按顺序尝试分割
     chunk_size=200,
