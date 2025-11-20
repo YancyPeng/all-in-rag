@@ -146,7 +146,7 @@ class HybridMultimodalSearcher:
         print("--> 正在初始化混合多模态编码器...")
         self.encoder = HybridMultimodalEncoder(
             visual_model_name="BAAI/bge-base-en-v1.5",
-            visual_model_path="../../models/bge/Visualized_base_en_v1.5.pth"
+            visual_model_path="/workspace/models/bge/Visualized_base_en_v1.5.pth"
         )
         
         # 连接Milvus
@@ -352,7 +352,7 @@ class HybridMultimodalSearcher:
             
             if retrieved_results:
                 panoramic_image = visualize_results(query_image_path, retrieved_results, mode.upper())
-                output_path = f"../../data/C4/{mode}_search_result.png"
+                output_path = f"/workspace/data/C4/{mode}_search_result.png"
                 cv2.imwrite(output_path, panoramic_image)
                 print(f"{mode.upper()} 搜索结果已保存到: {output_path}")
     
@@ -367,8 +367,8 @@ class HybridMultimodalSearcher:
 # 主程序
 if __name__ == "__main__":
     # 初始化设置
-    DATA_DIR = "../../data/C3/dragon"
-    METADATA_PATH = "../../data/C4/metadata/dragon.json"
+    DATA_DIR = "/workspace/data/C3/dragon"
+    METADATA_PATH = "/workspace/data/C4/metadata/dragon.json"
     COLLECTION_NAME = "hybrid_multimodal_dragon_demo"
     MILVUS_URI = "http://localhost:19530"
     

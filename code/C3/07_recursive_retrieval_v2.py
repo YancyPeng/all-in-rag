@@ -15,7 +15,7 @@ Settings.llm = DeepSeek(model="deepseek-chat", api_key=os.getenv("DEEPSEEK_API_K
 Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-zh-v1.5")
 
 # 1. 加载和预处理数据
-excel_file = '../../data/C3/excel/movie.xlsx'
+excel_file = '/workspace/data/C3/excel/movie.xlsx'
 xls = pd.ExcelFile(excel_file)
 
 summary_docs = []

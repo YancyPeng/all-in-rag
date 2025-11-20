@@ -2,7 +2,7 @@ from unstructured.partition.pdf import partition_pdf
 
 # 使用Unstructured加载并解析PDF文档
 elements = partition_pdf(
-    filename="/workspaces/all-in-rag/data/C2/pdf/rag.pdf",
+    filename="/workspace/data/C2/pdf/rag.pdf",
     strategy="hi_res",
     chunking_strategy="by_title"
 )

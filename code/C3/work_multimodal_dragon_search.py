@@ -127,9 +127,9 @@ def visualize_results(query_image_path: str, retrieved_results: list, img_height
 
 # 1. 初始化设置
 MODEL_NAME = "BAAI/bge-base-en-v1.5"
-MODEL_PATH = "../../models/bge/Visualized_base_en_v1.5.pth"
-DATA_DIR = "../../data/C3/dragon"
-METADATA_PATH = "../../data/C4/metadata/dragon.json"
+MODEL_PATH = "/workspace/models/bge/Visualized_base_en_v1.5.pth"
+DATA_DIR = "/workspace/data/C3/dragon"
+METADATA_PATH = "/workspace/data/C4/metadata/dragon.json"
 COLLECTION_NAME = "multimodal_dragon_demo"
 MILVUS_URI = "http://localhost:19530"
 
@@ -289,7 +289,7 @@ for i, hit in enumerate(image_search_results):
 print(f"\n--> 正在可视化结果并清理资源")
 if retrieved_results:
     panoramic_image = visualize_results(query_image_path, retrieved_results)
-    combined_image_path = "../../data/C4/multimodal_search.png"
+    combined_image_path = "/workspace/data/C4/multimodal_search.png"
     cv2.imwrite(combined_image_path, panoramic_image)
     print(f"结果图像已保存到: {combined_image_path}")
     # Image.open(combined_image_path).show()

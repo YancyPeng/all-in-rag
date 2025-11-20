@@ -11,7 +11,7 @@ from langchain_deepseek import ChatDeepSeek
 
 load_dotenv()
 
-markdown_path = "/workspaces/all-in-rag/data/C2/pdf/rag.pdf"
+markdown_path = "/workspace/data/C2/pdf/rag.pdf"
 
 # 加载本地markdown文件
 loader = UnstructuredPDFLoader(file_path=markdown_path,

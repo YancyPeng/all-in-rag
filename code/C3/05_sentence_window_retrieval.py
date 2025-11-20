@@ -11,7 +11,7 @@ Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-en")
 
 # 2. 加载文档
 documents = SimpleDirectoryReader(
-    input_files=["../../data/C3/pdf/IPCC_AR6_WGII_Chapter03.pdf"]
+    input_files=["/workspace/data/C3/pdf/IPCC_AR6_WGII_Chapter03.pdf"]
 ).load_data()
 
 # 3. 创建节点与构建索引

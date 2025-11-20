@@ -10,8 +10,8 @@ from PIL import Image
 
 # 1. 初始化设置
 MODEL_NAME = "BAAI/bge-base-en-v1.5"
-MODEL_PATH = "../../models/bge/Visualized_base_en_v1.5.pth"
-DATA_DIR = "../../data/C3"
+MODEL_PATH = "/workspace/models/bge/Visualized_base_en_v1.5.pth"
+DATA_DIR = "/workspace/data/C3"
 COLLECTION_NAME = "multimodal_demo"
 MILVUS_URI = "http://localhost:19530"
 
@@ -74,9 +74,11 @@ if milvus_client.has_collection(COLLECTION_NAME):
     milvus_client.drop_collection(COLLECTION_NAME)
     print(f"已删除已存在的 Collection: '{COLLECTION_NAME}'")
 
+# 获取图像列表 DATA_DIR/gragon/*.png 
 image_list = glob(os.path.join(DATA_DIR, "dragon", "*.png"))
 if not image_list:
     raise FileNotFoundError(f"在 {DATA_DIR}/dragon/ 中未找到任何 .png 图像。")
+# 计算第一张图片的向量维度，并将其应用在所有图像上
 dim = len(encoder.encode_image(image_list[0]))
 
 fields = [
@@ -96,18 +98,7 @@ print(f"成功创建 Collection: '{COLLECTION_NAME}'")
 print("Collection 结构:")
 print(milvus_client.describe_collection(collection_name=COLLECTION_NAME))
 
-# 5. 准备并插入数据
-print(f"\n--> 正在向 '{COLLECTION_NAME}' 插入数据")
-data_to_insert = []
-for image_path in tqdm(image_list, desc="生成图像嵌入"):
-    vector = encoder.encode_image(image_path)
-    data_to_insert.append({"vector": vector, "image_path": image_path})
-
-if data_to_insert:
-    result = milvus_client.insert(collection_name=COLLECTION_NAME, data=data_to_insert)
-    print(f"成功插入 {result['insert_count']} 条数据。")
-
-# 6. 创建索引
+# 创建索引
 print(f"\n--> 正在为 '{COLLECTION_NAME}' 创建索引")
 index_params = milvus_client.prepare_index_params()
 index_params.add_index(
@@ -120,6 +111,21 @@ milvus_client.create_index(collection_name=COLLECTION_NAME, index_params=index_p
 print("成功为向量字段创建 HNSW 索引。")
 print("索引详情:")
 print(milvus_client.describe_index(collection_name=COLLECTION_NAME, index_name="vector"))
+
+# 5. 准备并插入数据
+print(f"\n--> 正在向 '{COLLECTION_NAME}' 插入数据")
+data_to_insert = []
+# tqdm 进度条
+for image_path in tqdm(image_list, desc="生成图像嵌入"):
+    vector = encoder.encode_image(image_path)
+    data_to_insert.append({"vector": vector, "image_path": image_path})
+
+if data_to_insert:
+    result = milvus_client.insert(collection_name=COLLECTION_NAME, data=data_to_insert)
+    print(f"成功插入 {result['insert_count']} 条数据。")
+
+
+
 milvus_client.load_collection(collection_name=COLLECTION_NAME)
 print("已加载 Collection 到内存中。")
 

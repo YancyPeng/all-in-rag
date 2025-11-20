@@ -17,7 +17,7 @@ Settings.llm = DeepSeek(model="deepseek-chat", api_key=os.getenv("DEEPSEEK_API_K
 Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-zh-v1.5")
 
 # 1.加载数据并为每个工作表创建查询引擎和摘要节点
-excel_file = '../../data/C3/excel/movie.xlsx'
+excel_file = '/workspace/data/C3/excel/movie.xlsx'
 xls = pd.ExcelFile(excel_file)
 
 df_query_engines = {}
@@ -48,7 +48,9 @@ vector_retriever = vector_index.as_retriever(similarity_top_k=1)
 # 3.2 创建递归检索器
 recursive_retriever = RecursiveRetriever(
     "vector",
+    # 首先查询顶层索引，然后根据匹配的摘要节点ID查询对应的工作表
     retriever_dict={"vector": vector_retriever},
+    # 将工作表名称映射到其查询引擎
     query_engine_dict=df_query_engines,
     verbose=True,
 )

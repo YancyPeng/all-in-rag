@@ -14,6 +14,12 @@ docs = [Document(text=t) for t in texts]
 
 # 3. 创建索引并持久化到本地
 index = VectorStoreIndex.from_documents(docs)
-persist_path = "./llamaindex_index_store"
-index.storage_context.persist(persist_dir=persist_path)
-print(f"LlamaIndex 索引已保存至: {persist_path}")
+# persist_path = "./llamaindex_index_store"
+# index.storage_context.persist(persist_dir=persist_path)
+# print(f"LlamaIndex 索引已保存至: {persist_path}")
+
+retriever = index.as_retriever()
+nodes = retriever.retrieve("张三是谁？")
+for node in nodes:
+    print(f"Score: {node.score}")
+    print(f"Text: {node.text}")
