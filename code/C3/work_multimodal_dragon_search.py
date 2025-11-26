@@ -4,7 +4,7 @@ from tqdm import tqdm
 from glob import glob
 import torch
 from visual_bge.visual_bge.modeling import Visualized_BGE
-from pymilvus import MilvusClient, FieldSchema, CollectionSchema, DataType
+from pymilvus import MilvusClient, FieldSchema, CollectionSchema, DataType,RRFRanker,AnnSearchRequest
 import numpy as np
 import cv2
 from PIL import Image
@@ -71,6 +71,9 @@ class Encoder:
     def __init__(self, model_name: str, model_path: str):
         self.model = Visualized_BGE(model_name_bge=model_name, model_weight=model_path)
         self.model.eval()
+        from pymilvus.model.hybrid import BGEM3EmbeddingFunction
+        self.bge_m3 = BGEM3EmbeddingFunction(use_fp16=False, device="cpu")
+    
 
     def encode_query(self, image_path: str = None, text: str = None) -> list[float]:
         """编码查询（支持图像+文本或仅文本）"""
@@ -85,11 +88,17 @@ class Encoder:
                 raise ValueError("必须提供图像路径或文本内容")
         return query_emb.tolist()[0]
 
-    def encode_multimodal(self, image_path: str, text: str) -> list[float]:
+    def encode_multimodal(self, image_path: str, text: str) -> dict:
         """编码多模态内容（图像+文本）"""
         with torch.no_grad():
             query_emb = self.model.encode(image=image_path, text=text)
-        return query_emb.tolist()[0]
+        # 使用BGE-M3生成稀疏向量
+        sparse_embeddings = self.bge_m3([text])    
+
+        return {
+            'dense': query_emb.tolist()[0],
+            'sparse': sparse_embeddings["sparse"]._getrow(0)
+        }
 
 def visualize_results(query_image_path: str, retrieved_results: list, img_height: int = 300, img_width: int = 300, row_count: int = 3) -> np.ndarray:
     """从检索到的结果创建一个全景图用于可视化"""
@@ -151,11 +160,13 @@ if milvus_client.has_collection(COLLECTION_NAME):
 # 获取向量维度
 sample_text = dataset.get_text_content(dataset.images[0])
 sample_path = dataset.images[0].path
-dim = len(encoder.encode_multimodal(sample_path, sample_text))
+dim = len(encoder.encode_multimodal(sample_path, sample_text)["dense"])
 
 fields = [
     FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),
-    FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=dim),
+    FieldSchema(name="dense_vector", dtype=DataType.FLOAT_VECTOR, dim=dim),
+    FieldSchema(name="sparse_vector", dtype=DataType.SPARSE_FLOAT_VECTOR),
+
     FieldSchema(name="img_id", dtype=DataType.VARCHAR, max_length=100),
     FieldSchema(name="image_path", dtype=DataType.VARCHAR, max_length=512),
     FieldSchema(name="title", dtype=DataType.VARCHAR, max_length=256),
@@ -177,10 +188,13 @@ data_to_insert = []
 for img_data in tqdm(dataset.images, desc="生成多模态嵌入"):
     # 结合图像和文本信息生成向量
     text_content = dataset.get_text_content(img_data)
-    vector = encoder.encode_multimodal(img_data.path, text_content)
+    denseVector = encoder.encode_multimodal(img_data.path, text_content)["dense"]
+    sparseVector = encoder.encode_multimodal(img_data.path, text_content)["sparse"]
+
     
     data_to_insert.append({
-        "vector": vector,
+        "dense_vector": denseVector,
+        "sparse_vector": sparseVector,
         "img_id": img_data.img_id,
         "image_path": img_data.path,
         "title": img_data.title,
@@ -198,13 +212,18 @@ if data_to_insert:
 print(f"\n--> 正在为 '{COLLECTION_NAME}' 创建索引")
 index_params = milvus_client.prepare_index_params()
 index_params.add_index(
-    field_name="vector",
+    field_name="dense_vector",
     index_type="HNSW",
     metric_type="COSINE",
     params={"M": 16, "efConstruction": 256}
 )
+index_params.add_index(
+    field_name="sparse_vector",
+    index_type="SPARSE_INVERTED_INDEX",
+    metric_type="IP"
+)
 milvus_client.create_index(collection_name=COLLECTION_NAME, index_params=index_params)
-print("成功为向量字段创建 HNSW 索引。")
+print("成功为向量字段创建 HNSW 和 SPARSE_INVERTED_INDEX 索引。")
 milvus_client.load_collection(collection_name=COLLECTION_NAME)
 print("已加载 Collection 到内存中。")
 
@@ -223,6 +242,7 @@ print(f"查询文本: {query_text}")
 search_results = milvus_client.search(
     collection_name=COLLECTION_NAME,
     data=[query_vector],
+    anns_field="dense_vector",
     output_fields=["img_id", "image_path", "title", "description", "category", "location", "environment"],
     limit=6,
     search_params={"metric_type": "COSINE", "params": {"ef": 128}}
@@ -252,6 +272,7 @@ print(f"查询文本: {text_query}")
 text_search_results = milvus_client.search(
     collection_name=COLLECTION_NAME,
     data=[text_query_vector],
+    anns_field="dense_vector",
     output_fields=["img_id", "image_path", "title", "description", "category", "location", "environment"],
     limit=3,
     search_params={"metric_type": "COSINE", "params": {"ef": 128}}
@@ -272,6 +293,7 @@ print(f"查询图像: {image_query_path}")
 image_search_results = milvus_client.search(
     collection_name=COLLECTION_NAME,
     data=[image_query_vector],
+    anns_field="dense_vector",
     output_fields=["img_id", "image_path", "title", "description", "category", "location", "environment"],
     limit=3,
     search_params={"metric_type": "COSINE", "params": {"ef": 128}}
@@ -284,6 +306,45 @@ for i, hit in enumerate(image_search_results):
     print(f"    描述: {hit['entity']['description'][:80]}...")
     print(f"    路径: {hit['entity']['image_path']}")
     print("-" * 30)
+
+
+
+# 示例4：稀疏索引+稠密索引的混合检索
+query_image_path = os.path.join(DATA_DIR, "query.png")
+query_text = "悬崖上的巨龙"
+query_vector = encoder.encode_multimodal(image_path=query_image_path, text=query_text)
+
+print(f"\n=== 稀疏索引+稠密索引的混合检索（图像+文本）===")
+print(f"查询图像: {query_image_path}")
+print(f"查询文本: {query_text}")
+
+# 创建 RRF 融合器
+rerank = RRFRanker(k=60)
+
+dense_req = AnnSearchRequest([query_vector['dense']], "dense_vector", {"metric_type": "COSINE", "params": {"ef": 128}}, limit=6)
+sparse_req = AnnSearchRequest([query_vector['sparse']], "sparse_vector", {"metric_type": "IP", "params": {}}, limit=6)
+
+search_results = milvus_client.hybrid_search(
+    reqs=[dense_req, sparse_req],
+    ranker=rerank,
+    collection_name = COLLECTION_NAME,
+    output_fields=["img_id", "image_path", "title", "description", "category", "location", "environment"],
+    limit=6
+)[0]
+
+retrieved_results = []
+print("检索结果:")
+for i, hit in enumerate(search_results):
+    print(f"  Top {i+1}: ID={hit['id']}, 距离={hit['distance']:.4f}")
+    print(f"    标题: {hit['entity']['title']}")
+    print(f"    描述: {hit['entity']['description'][:100]}...")
+    print(f"    类别: {hit['entity']['category']}")
+    print(f"    路径: {hit['entity']['image_path']}")
+    print("-" * 50)
+    retrieved_results.append({
+        'image_path': hit['entity']['image_path'],
+        'distance': hit['distance']
+    })    
 
 # 7. 可视化与清理
 print(f"\n--> 正在可视化结果并清理资源")

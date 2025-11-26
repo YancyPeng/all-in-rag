@@ -66,7 +66,7 @@ metadata_field_info = [
     ),
     AttributeInfo(
         name="length",
-        description="视频长度（整数）",
+        description="视频时长（整数）",
         type="integer"
     )
 ]
@@ -78,6 +78,8 @@ llm = ChatDeepSeek(
     api_key=os.getenv("DEEPSEEK_API_KEY")
     )
 
+# 利用传入的 llm/document_contents 和 meta_field_info 生成一个结构化查询对象
+# 接着将查询对象翻译成 Chorma 能够理解和执行的语句
 retriever = SelfQueryRetriever.from_llm(
     llm=llm,
     vectorstore=vectorstore,
@@ -90,7 +92,7 @@ retriever = SelfQueryRetriever.from_llm(
 # 5. 执行查询示例
 queries = [
     "时间最短的视频",
-    "时长大于600秒的视频"
+    "播放量最高的视频"
 ]
 
 for query in queries:
