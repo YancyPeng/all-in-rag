@@ -12,6 +12,7 @@ from langchain_core.documents import Document
 from pathlib import Path
 import uuid
 
+
 logger = logging.getLogger(__name__)
 
 class DataPreparationModule:

@@ -42,6 +42,7 @@ tools = [
 messages = [{"role": "user", "content": "杭州今天天气怎么样？"}]
 print(f"User> {messages[0]['content']}\n")
 message = send_messages(messages, tools=tools)
+print(f"第一次模型调用的结果> {message.content}")
 
 # 2. 执行工具，并将结果返回模型
 if message.tool_calls:
@@ -55,12 +56,12 @@ if message.tool_calls:
     messages.append(message)
 
     # 模拟执行工具
-    tool_output = "24℃，晴朗"
+    # tool_output = "24℃，晴朗"
     print(f"--- 执行工具并返回结果 ---")
-    print(f"工具执行结果: {tool_output}\n")
+    print(f"工具执行结果: {message.content}\n")
 
     # 将工具的执行结果作为一个新的消息添加到历史中
-    messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": tool_output})
+    messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": message.content})
 
     # 3. 第二次调用：将工具结果返回给模型，获取最终回答
     print("--- 将工具结果返回给模型，获取最终答案 ---")

@@ -51,8 +51,8 @@ class RecipeRAGSystem:
             raise FileNotFoundError(f"数据路径不存在: {self.config.data_path}")
 
         # 检查API密钥
-        if not os.getenv("MOONSHOT_API_KEY"):
-            raise ValueError("请设置 MOONSHOT_API_KEY 环境变量")
+        if not os.getenv("DEEPSEEK_API_KEY"):
+            raise ValueError("请设置 DEEPSEEK_API_KEY 环境变量")
     
     def initialize_system(self):
         """初始化所有模块"""
@@ -114,7 +114,10 @@ class RecipeRAGSystem:
 
         # 6. 初始化检索优化模块
         print("初始化检索优化...")
+        self.index_module.get_test_data_set(self.generation_module.llm,chunks)
         self.retrieval_module = RetrievalOptimizationModule(vectorstore, chunks)
+
+
 
         # 7. 显示统计信息
         stats = self.data_module.get_statistics()

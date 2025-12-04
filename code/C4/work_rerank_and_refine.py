@@ -141,7 +141,7 @@ llm = ChatDeepSeek(
 )
 
 # 1. 加载和处理文档
-loader = TextLoader("../../data/C4/txt/ai.txt", encoding="utf-8")
+loader = TextLoader("/workspace/data/C4/txt/ai.txt", encoding="utf-8")
 documents = loader.load()
 
 # 优化分块策略：减少重叠，使用中文友好的分隔符

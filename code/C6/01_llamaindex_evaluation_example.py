@@ -18,18 +18,18 @@ Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-en")
 
 async def main():
     # 1. 加载文档
-    reader = SimpleDirectoryReader(input_files=["../../data/C3/pdf/IPCC_AR6_WGII_Chapter03.pdf"])
+    reader = SimpleDirectoryReader(input_files=["/workspace/data/C3/pdf/IPCC_AR6_WGII_Chapter03.pdf"])
     documents = reader.load_data()
 
     # 1.1 加载或生成响应评估数据集
-    if os.path.exists("./c6_response_eval_dataset.json"):
+    if os.path.exists("/workspace/code/C6/c6_response_eval_dataset.json"):
         print("加载响应评估数据集...")
-        response_eval_dataset = QueryResponseDataset.from_json("./c6_response_eval_dataset.json")
+        response_eval_dataset = QueryResponseDataset.from_json("/workspace/code/C6/c6_response_eval_dataset.json")
     else:
         print("生成响应评估数据集...")
         dataset_generator = DatasetGenerator.from_documents(documents[:10])  # 减少文档数量
         response_eval_dataset = await dataset_generator.agenerate_dataset_from_nodes(num=15)  # 减少问题数量
-        response_eval_dataset.save_json("./c6_response_eval_dataset.json")
+        response_eval_dataset.save_json("/workspace/code/C6/c6_response_eval_dataset.json")
 
 
 

@@ -9,6 +9,11 @@ from pathlib import Path
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
+from ragas.testset import TestsetGenerator
+import pandas as pd
+from langchain_core.language_models import BaseLanguageModel
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +69,33 @@ class IndexConstructionModule:
         
         logger.info(f"向量索引构建完成，包含 {len(chunks)} 个向量")
         return self.vectorstore
+
+
+    def get_test_data_set(self, generator_llm: BaseLanguageModel, chunks: List[Document]):
+
+        if not Path("/workspace/code/C8/testset_debug.csv").exists():
+            logger.info(f"测试集不存在: /workspace/code/C8/testset_debug.csv，将重新构建")
+            generator = TestsetGenerator.from_langchain(
+            llm=generator_llm,
+            embedding_model=self.embeddings
+            )
+
+            # 1.4 生成测试集
+            testset = generator.generate_with_langchain_docs(
+                documents=chunks,
+                testset_size=16
+            )
+            test_df = testset.to_pandas()
+            print(f"DataFrame 列名: {test_df.columns.tolist()}")
+            test_df.to_csv("/workspace/code/C8/testset_debug.csv", index=False, encoding='utf-8')
+            print("测试集已保存到: /workspace/code/C8/testset_debug.csv")
+            return test_df
+        else:
+            logger.info(f"测试集已存在: /workspace/code/C8/testset_debug.csv，将加载")
+            test_df = pd.read_csv("/workspace/code/C8/testset_debug.csv")
+            return test_df
+        
+
     
     def add_documents(self, new_chunks: List[Document]):
         """

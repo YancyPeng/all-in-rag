@@ -29,17 +29,6 @@ COLLECTION_NAME = "dual_vector_docs"
 MAX_SEQ_LEN = 128  # ColBERT 最大序列长度
 COLBERT_DIM = 768   # ColBERT 向量维度
 
-class Encoder:
-    """编码器类，用于将图像和文本编码为向量。"""
-    def __init__(self, model_name: str, model_path: str):
-        self.model = Visualized_BGE(model_name_bge=model_name, model_weight=model_path)
-        self.model.eval()
-
-    def encode_query(self, text: str) -> list[float]:
-        with torch.no_grad():
-            query_emb = self.model.encode(text=text)
-        return query_emb.tolist()[0]
-
 class DualVectorMilvusRetriever(BaseRetriever):
     collection: Collection = Field(..., description="Milvus 集合")
     ef: BGEM3EmbeddingFunction = Field(..., description="嵌入函数")
@@ -245,13 +234,18 @@ embeddings = HuggingFaceEmbeddings(
 )
 # 初始化 SemanticChunker
 text_splitter = SemanticChunker(
-    embeddings,
-    breakpoint_threshold_type="percentile"  # 也可以是 "standard_deviation", "interquartile", "gradient"
+    embeddings= embeddings,
+    sentence_split_regex= r"(?<=[。？！])\s+",
+    breakpoint_threshold_type = "percentile",  # 也可以是 "standard_deviation", "interquartile", "gradient"
+    buffer_size = 1
 )
 loader = TextLoader("/workspace/data/C4/txt/ai.txt", encoding="utf-8")
 documents = loader.load()
 docs = text_splitter.split_documents(documents)
+print(f"\n--> docs 的长度为：{len(docs)}")
+
 doc_texts = [doc.page_content for doc in docs]
+
 
 # 生成向量嵌入
 ann_vectors = ef(doc_texts)["dense"]
